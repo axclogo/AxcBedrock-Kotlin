@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test, verify types, and publish locally
+        run: ./gradlew --no-daemon check publishToMavenLocal -Dmaven.repo.local="$RUNNER_TEMP/axc-maven"
+      - name: Consume the published artifact in an independent project
+        run: ./gradlew --no-daemon -p example run -Dmaven.repo.local="$RUNNER_TEMP/axc-maven"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: build/reports/tests/test
